@@ -1,74 +1,54 @@
+import streamlit as st
 import cv2
 import numpy as np
-import os
+from PIL import Image
 
-def mood_enhancer(img_gray):
-    # Histogram Equalization
-    hist_eq = cv2.equalizeHist(img_gray)
+st.title(" Fruit Spoilage Estimator")
 
-    # Gaussian Smoothing
-    blur = cv2.GaussianBlur(hist_eq, (5, 5), 0)
+# Upload the main image (e.g., today's image)
+uploaded_file = st.file_uploader("Upload a fruit image", type=["jpg", "jpeg", "png"])
 
-    # Sharpening Kernel
-    kernel_sharp = np.array([[0, -1, 0],
-                             [-1, 5,-1],
-                             [0, -1, 0]])
-    sharpened = cv2.filter2D(blur, -1, kernel_sharp)
-    return sharpened
+# Optional: Upload a previous day's image for histogram comparison
+prev_image_file = st.file_uploader("Upload a previous day's fruit image (for comparison)", type=["jpg", "jpeg", "png"])
 
-def poor_lighting_fixer(img_color):
-    gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
+def load_image(file):
+    file_bytes = np.asarray(bytearray(file.read()), dtype=np.uint8)
+    return cv2.imdecode(file_bytes, 1)
 
-    # Detect dark areas
-    _, mask = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
+def get_histogram(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hist = cv2.calcHist([hsv], [0, 1], None, [50, 60], [0, 180, 0, 256])
+    return cv2.normalize(hist, hist).flatten()
 
-    # Histogram Equalization on Y channel
-    ycrcb = cv2.cvtColor(img_color, cv2.COLOR_BGR2YCrCb)
-    y, cr, cb = cv2.split(ycrcb)
-    y_eq = cv2.equalizeHist(y)
-    ycrcb_eq = cv2.merge((y_eq, cr, cb))
-    img_eq = cv2.cvtColor(ycrcb_eq, cv2.COLOR_YCrCb2BGR)
+if uploaded_file:
+    image = load_image(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
 
-    # Blend enhanced parts into original
-    mask_colored = cv2.merge([mask, mask, mask])
-    output = np.where(mask_colored == 255, img_eq, img_color)
-    return output
+    # --- 1. Color Processing (Discoloration Detection)
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_brown = (10, 50, 50)
+    upper_brown = (20, 255, 255)
+    mask = cv2.inRange(hsv, lower_brown, upper_brown)
+    color_result = cv2.bitwise_and(image, image, mask=mask)
+    st.image(color_result, caption="Discoloration Detection (Color Mask)", use_column_width=True)
 
-def main():
-    print("=== Image Processing Project ===")
-    path = input("Enter the image path: ").strip()
-    
-    if not os.path.isfile(path):
-        print("❌ File not found! Please check the path.")
-        return
+    # --- 2. Spatial Filtering (Blur + Edge)
+    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    edges = cv2.Canny(blurred, 100, 200)
+    st.image(edges, caption="Edge Detection (Spatial Filtering)", channels="GRAY", use_column_width=True)
 
-    choice = input("Choose project: [1] Mood Enhancer | [2] Poor Lighting Fixer: ").strip()
-    
-    if choice == '1':
-        img_gray = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        if img_gray is None:
-            print("❌ Failed to load image.")
-            return
-        enhanced = mood_enhancer(img_gray)
-        cv2.imshow("Original (Grayscale)", img_gray)
-        cv2.imshow("Mood Enhanced", enhanced)
+    # --- 3. Histogram Comparison
+    if prev_image_file:
+        prev_image = load_image(prev_image_file)
+        hist1 = get_histogram(image)
+        hist2 = get_histogram(prev_image)
+        similarity = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+        st.image(prev_image, caption="Previous Day's Image", use_column_width=True)
+        st.success(f"📊 Histogram Similarity Score: **{similarity:.4f}** (1 = identical, 0 = different)")
 
-    elif choice == '2':
-        img_color = cv2.imread(path)
-        if img_color is None:
-            print("❌ Failed to load image.")
-            return
-        enhanced = poor_lighting_fixer(img_color)
-        cv2.imshow("Original", img_color)
-        cv2.imshow("Low Light Enhanced", enhanced)
-
-    else:
-        print("❌ Invalid choice! Please enter 1 or 2.")
-        return
-
-    print("✅ Press any key on the image window to exit.")
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+    # --- 4. Distance Transform (Spoilage Spread Estimation)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
+    dist = cv2.distanceTransform(thresh, cv2.DIST_L2, 5)
+    dist_norm = cv2.normalize(dist, None, 0, 1.0, cv2.NORM_MINMAX)
+    st.image(dist_norm, caption="Distance Transform (Spoilage Spread)", channels="GRAY", use_column_width=True)
