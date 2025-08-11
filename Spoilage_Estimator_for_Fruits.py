@@ -44,7 +44,7 @@ if uploaded_file:
         hist2 = get_histogram(prev_image)
         similarity = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
         st.image(prev_image, caption="Previous Day's Image", use_column_width=True)
-        st.success(f"📊 Histogram Similarity Score: **{similarity:.4f}** (1 = identical, 0 = different)")
+        st.success(f" Histogram Similarity Score: **{similarity:.4f}** (1 = identical, 0 = different)")
 
     # --- 4. Distance Transform (Spoilage Spread Estimation)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
