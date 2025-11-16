@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ------------------------- Streamlit Config -------------------------
-st.set_page_config(page_title="Smart Fruit Spoilage Detector", layout="wide")
+st.set_page_config(page_title="Spoilage Estimator for Fruits", layout="wide")
 st.title("Spoilage Estimator for Fruits")
 
 # ------------------------- Utility -------------------------
@@ -340,7 +340,7 @@ if uploaded_file and allowed_file(uploaded_file.name):
             e3.image((normalize(fmap["canny"]) * 255).astype(np.uint8), caption="Canny (soft)", use_column_width=True, clamp=True)
 
         # color + texture analysis
-        st.markdown("### 🧠 Color and Texture Analysis")
+        st.markdown("###  Color and Texture Analysis")
         mean_hue, mean_sat, mean_lightness, lap_var = analyze_color_texture(image_bgr)
         col_a, col_b, col_c, col_d = st.columns(4)
         col_a.metric("Mean Hue", f"{mean_hue:.2f}")
