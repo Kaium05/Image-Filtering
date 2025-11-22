@@ -1,0 +1,61 @@
+from google.colab import files
+files.upload()  
+
+
+
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import files
+
+
+filename = '  ' 
+
+img = cv2.imread(filename)
+if img is None:
+    raise FileNotFoundError(f"Could not find '{filename}'. Make sure it is uploaded.")
+
+
+if len(img.shape) == 3:
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+else:
+    img_gray = img.copy()
+
+original = img_gray.copy()      # keep original for display
+img_gray = img_gray.astype(float)
+
+# Filter parameters
+window_size = 3
+k = window_size // 2
+h, w = img_gray.shape
+
+# Initialize output image (keep borders unchanged)
+out = img_gray.copy()
+
+# Apply manual 3x3 Max Filter
+for i in range(k, h - k):
+    for j in range(k, w - k):
+        region = img_gray[i-k:i+k+1, j-k:j+k+1]
+        out[i, j] = np.max(region)
+
+# Convert back to uint8
+out = out.astype(np.uint8)
+
+# ---- Save result ----
+cv2.imwrite('max_output.jpg', out)
+
+# ---- Display original and filtered images ----
+plt.figure(figsize=(10,5))
+
+plt.subplot(1,2,1)
+plt.imshow(original, cmap='gray')
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1,2,2)
+plt.imshow(out, cmap='gray')
+plt.title('Max Filter Output')
+plt.axis('off')
+
+plt.show()
