@@ -1,0 +1,78 @@
+from google.colab import files
+uploaded = files.upload()
+
+
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import files
+
+
+filename = 'map.jpg' 
+
+
+img = cv2.imread(filename)
+if img is None:
+    raise FileNotFoundError(f"Could not find '{filename}'. Make sure it is uploaded.")
+
+# Convert BGR to RGB for display
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(float) / 255.0  # normalize to 0-1
+
+# Convert to grayscale
+if img_rgb.shape[2] == 3:
+    gray = cv2.cvtColor((img_rgb*255).astype(np.uint8), cv2.COLOR_RGB2GRAY).astype(float) / 255.0
+else:
+    gray = img_rgb.copy()
+
+
+# ---- Define Laplacian kernel ----
+laplacian_kernel = np.array([[0, 1, 0],
+                             [1,-4, 1],
+                             [0, 1, 0]], dtype=float)
+
+
+# ---- Manual convolution function ----
+def manual_convolution(image, kernel):
+    rows, cols = image.shape
+    k = kernel.shape[0]
+    pad = k // 2
+    # Pad with zeros
+    padded = np.pad(image, ((pad,pad),(pad,pad)), mode='constant', constant_values=0)
+    output = np.zeros_like(image)
+
+    for i in range(rows):
+        for j in range(cols):
+            region = padded[i:i+k, j:j+k]
+            output[i,j] = np.sum(region * kernel)
+    return output
+
+
+# ---- Apply Laplacian ----
+laplacian = manual_convolution(gray, laplacian_kernel)
+
+# Absolute value and clip to 0-1
+laplacian_abs = np.clip(np.abs(laplacian), 0, 1)
+
+# Convert to 3-channel
+laplacian_color = np.stack([laplacian_abs]*3, axis=2)
+
+# ---- Sharpen the image ----
+alpha = 0.7
+sharpened = img_rgb - alpha * laplacian_color
+sharpened = np.clip(sharpened, 0, 1)
+
+# ---- Display results ----
+plt.figure(figsize=(12,5))
+
+plt.subplot(1,2,1)
+plt.imshow(img_rgb)
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1,2,2)
+plt.imshow(sharpened)
+plt.title('Sharpened Image (Manual Laplacian)')
+plt.axis('off')
+
+plt.show()
