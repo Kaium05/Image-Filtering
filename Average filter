@@ -1,0 +1,39 @@
+#from google.colab import files
+#uploaded = files.upload()
+
+
+
+import cv2
+import numpy as np
+from google.colab.patches import cv2_imshow
+img = cv2.imread('')
+
+
+if len(img.shape) == 3:
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+img = img.astype(float)
+
+# Filter size
+window_size = 3
+k = window_size // 2
+h, w = img.shape
+
+# Create average kernel
+kernel = np.ones((window_size, window_size)) / (window_size ** 2)
+
+# Output image
+out = np.zeros((h, w))
+
+# Apply average filter manually
+for i in range(k, h-k):
+    for j in range(k, w-k):
+        region = img[i-k:i+k+1, j-k:j+k+1]
+        out[i,j] = np.sum(region * kernel)
+
+# Clip values
+out = np.clip(out, 0, 255).astype(np.uint8)
+
+
+cv2_imshow(img.astype(np.uint8))
+cv2_imshow(out)
