@@ -1,0 +1,68 @@
+from google.colab import files
+files.upload() 
+
+
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import files
+
+
+filename = 's.png'  
+
+
+img = cv2.imread(filename)
+if img is None:
+    raise FileNotFoundError(f"Could not find '{filename}'. Make sure it is uploaded.")
+
+
+if len(img.shape) == 3:
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+else:
+    img_gray = img.copy()
+
+img_gray = img_gray.astype(float)  # convert to float for calculations
+
+# ---- Sobel kernels ----
+sobel_x = np.array([[-1,0,1],[-2,0,2],[-1,0,1]])
+sobel_y = np.array([[-1,-2,-1],[0,0,0],[1,2,1]])
+
+# ---- Function to apply convolution manually ----
+def apply_kernel(img, kernel):
+    h, w = img.shape
+    k = kernel.shape[0] // 2
+    out = np.zeros((h, w))
+    
+    for i in range(k, h - k):
+        for j in range(k, w - k):
+            region = img[i-k:i+k+1, j-k:j+k+1]
+            out[i, j] = np.sum(region * kernel)
+    
+    # Clip values to 0-255 and convert to uint8
+    out = np.clip(out, 0, 255)
+    return out.astype(np.uint8)
+
+# ---- Apply Sobel filters ----
+gx = apply_kernel(img_gray, sobel_x)
+gy = apply_kernel(img_gray, sobel_y)
+
+# Gradient magnitude
+mag = np.sqrt(gx.astype(float)**2 + gy.astype(float)**2)
+sobel_img = np.clip(mag, 0, 255).astype(np.uint8)
+
+# ---- Display original and Sobel image ----
+plt.figure(figsize=(10,5))
+
+plt.subplot(1,2,1)
+plt.imshow(img_gray.astype(np.uint8), cmap='gray')
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1,2,2)
+plt.imshow(sobel_img, cmap='gray')
+plt.title('Sobel Filter Output')
+plt.axis('off')
+
+plt.show()
+
