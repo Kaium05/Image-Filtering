@@ -1,0 +1,57 @@
+from google.colab import files
+files.upload()  
+
+
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import files
+
+
+# filename = next(iter(uploaded))
+filename = '  '  
+
+img = cv2.imread(filename)
+if img is None:
+    raise FileNotFoundError(f"Could not find '{filename}'. Make sure it is uploaded.")
+
+# Convert to grayscale if needed
+if len(img.shape) == 3:
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+else:
+    img_gray = img.copy()
+
+original = img_gray.copy()   # keep original
+img_gray = img_gray.astype(float)
+
+h, w = img_gray.shape
+window_size = 3
+k = window_size // 2
+
+# Initialize output with original values for borders
+out = img_gray.copy()
+
+# Apply 3x3 Min Filter
+for i in range(k, h - k):
+    for j in range(k, w - k):
+        region = img_gray[i-k:i+k+1, j-k:j+k+1]
+        out[i, j] = np.min(region)
+
+# Convert back to uint8
+out = out.astype(np.uint8)
+
+# ---- Display images ----
+plt.figure(figsize=(10,5))
+
+plt.subplot(1,2,1)
+plt.imshow(original, cmap='gray')
+plt.title('Original Image')
+plt.axis('off')
+
+plt.subplot(1,2,2)
+plt.imshow(out, cmap='gray')
+plt.title('Min Filter Output')
+plt.axis('off')
+
+plt.show()
